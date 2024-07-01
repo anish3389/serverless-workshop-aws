@@ -10,7 +10,7 @@ on:
       - 'feature**'
 
 env:
-  SAM_TEMPLATE: contracts/template.yaml
+  SAM_TEMPLATE: unicorn_contracts/template.yaml
   TESTING_STACK_NAME: anish-sam-app
   TESTING_PIPELINE_EXECUTION_ROLE: arn:aws:iam::426857564226:role/aws-sam-cli-managed-depl-pipe-PipelineExecutionRole-LV8NOSt7YIPV
   TESTING_CLOUDFORMATION_EXECUTION_ROLE: arn:aws:iam::426857564226:role/aws-sam-cli-managed-depl--CloudFormationExecutionRo-pbHn9HjN9I27
