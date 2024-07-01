@@ -1,0 +1,119 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template for EventBridge Pipepipe-dev-anish-unicorn
+Resources:
+  EventBus57a55f02:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: AnishUnicornContractsBus-dev
+      Policy: >-
+        {"Version":"2012-10-17","Statement":[{"Sid":"OnlyRulesForContractServiceEvents-dev","Effect":"Allow","Principal":{"AWS":"arn:aws:iam::426857564226:root"},"Action":["events:PutRule","events:DeleteRule","events:DescribeRule","events:DisableRule","events:EnableRule","events:PutTargets","events:RemoveTargets"],"Resource":"arn:aws:events:us-east-1:426857564226:rule/AnishUnicornContractsBus-dev/*","Condition":{"StringEquals":{"events:source":"uni-prop-prod-shared"},"Null":{"events:source":"false"},"StringEqualsIfExists":{"events:creatorAccount":"${aws:PrincipalAccount}"}}},{"Sid":"OnlyContactsServiceCanPublishToEventBus-dev","Effect":"Allow","Principal":{"AWS":"arn:aws:iam::426857564226:root"},"Action":"events:PutEvents","Resource":"arn:aws:events:us-east-1:426857564226:event-bus/AnishUnicornContractsBus-dev","Condition":{"StringEquals":{"events:source":"uni-prop-prod-shared"}}}]}
+      Tags:
+        - Key: aws:cloudformation:stack-id
+          Value: >-
+            arn:aws:cloudformation:us-east-1:426857564226:stack/anish-uni-prop-local-contracts/ed2d15a0-3469-11ef-aaf0-0ec354915ff7
+        - Key: aws:cloudformation:stack-name
+          Value: anish-uni-prop-local-contracts
+        - Key: aws:cloudformation:logical-id
+          Value: AnishUnicornContractsEventBus
+  Rolef733389d:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: Amazon_EventBridge_Pipe_pipe-dev-anish-unicorn21f5ad29
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: pipes.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceArn:
+                  Fn::Sub: >-
+                    arn:${AWS::Partition}:pipes:${AWS::Region}:${AWS::AccountId}:pipe/pipe-dev-anish-unicorn
+                aws:SourceAccount:
+                  Fn::Sub: ${AWS::AccountId}
+      MaxSessionDuration: 3600
+      Tags: []
+  Policy0ea185e1:
+    Type: AWS::IAM::RolePolicy
+    Properties:
+      PolicyName: EventBusPipeTargetTemplate12caa532
+      RoleName:
+        Ref: Rolef733389d
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - events:PutEvents
+            Resource:
+              - Fn::GetAtt:
+                  - EventBus57a55f02
+                  - Arn
+  Policy09bc7188:
+    Type: AWS::IAM::RolePolicy
+    Properties:
+      PolicyName: DynamoDbPipeSourceTemplate0e2bdff3
+      RoleName:
+        Ref: Rolef733389d
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:DescribeStream
+              - dynamodb:GetRecords
+              - dynamodb:GetShardIterator
+              - dynamodb:ListStreams
+            Resource:
+              - Fn::Sub: >-
+                  arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/anish-uni-prop-local-contracts-ContractsTable-UL1QS2TYL7B4/stream/2024-06-27T09:46:35.635
+  Pipe01208b7e:
+    Type: AWS::Pipes::Pipe
+    DependsOn:
+      - EventBus57a55f02
+      - Rolef733389d
+      - Policy0ea185e1
+      - Policy09bc7188
+    Properties:
+      RoleArn:
+        Fn::GetAtt:
+          - Rolef733389d
+          - Arn
+      Name: pipe-dev-anish-unicorn
+      DesiredState: RUNNING
+      Source:
+        Fn::Sub: >-
+          arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/anish-uni-prop-local-contracts-ContractsTable-UL1QS2TYL7B4/stream/2024-06-27T09:46:35.635
+      SourceParameters:
+        FilterCriteria:
+          Filters:
+            - Pattern: >-
+                {"eventName":["INSERT","MODIFY"],"dynamodb":{"NewImage":{"contract_status":{"S":["DRAFT","APPROVED"]}}}}
+        DynamoDBStreamParameters:
+          BatchSize: 1
+          MaximumRecordAgeInSeconds: -1
+          MaximumRetryAttempts: -1
+          StartingPosition: LATEST
+      LogConfiguration:
+        CloudwatchLogsLogDestination:
+          LogGroupArn:
+            Fn::Sub: >-
+              arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/vendedlogs/pipes/pipe-dev-anish-unicorn
+        Level: ERROR
+      TargetParameters:
+        InputTemplate: |-
+          {
+            "property_id": <$.dynamodb.Keys.property_id.S>,
+            "contract_id": <$.dynamodb.NewImage.contract_id.S>,
+            "contract_status": <$.dynamodb.NewImage.contract_status.S>,
+            "contract_last_modified_on": <$.dynamodb.NewImage.contract_last_modified_on.S>
+          }
+        EventBridgeEventBusParameters:
+          EndpointId: unicorn.dev
+      Target:
+        Fn::GetAtt:
+          - EventBus57a55f02
+          - Arn
+Parameters: {}

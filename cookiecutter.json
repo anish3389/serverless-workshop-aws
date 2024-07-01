@@ -1,0 +1,4 @@
+{
+  "project_name": "unicorn_contracts",
+  "_copy_without_render": ["*.yaml"]
+}
